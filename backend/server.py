@@ -724,7 +724,17 @@ async def get_dashboard_analytics(current_user: dict = Depends(get_current_user)
     
     workshop = await db.workshops.find_one({"owner_id": current_user["id"]}, {"_id": 0})
     if not workshop:
-        raise HTTPException(status_code=404, detail="Workshop not found")
+        # Return empty analytics if no workshop yet
+        return {
+            "total_jobs": 0,
+            "total_revenue": 0,
+            "total_collected": 0,
+            "total_credits": 0,
+            "avg_job_value": 0,
+            "status_counts": {},
+            "manager_revenue": {},
+            "daily_revenue": {}
+        }
     
     # Get all jobs
     jobs = await db.jobs.find({"workshop_id": workshop["id"]}, {"_id": 0}).to_list(100000)
