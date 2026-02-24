@@ -20,7 +20,8 @@ export const OwnerDashboard = () => {
       const response = await analyticsAPI.getDashboard();
       setAnalytics(response.data);
     } catch (error) {
-      toast.error('Failed to load analytics');
+      console.error('Analytics error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to load analytics');
     } finally {
       setLoading(false);
     }
