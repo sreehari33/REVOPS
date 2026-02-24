@@ -40,7 +40,8 @@ export const DashboardLayout = ({ children }) => {
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/jobs', label: 'Jobs', icon: Briefcase },
     { path: '/jobs/new', label: 'New Job', icon: Briefcase },
-    { path: '/payments', label: 'Payments', icon: CreditCard }
+    { path: '/payments', label: 'Payments', icon: CreditCard },
+    { path: '/profile', label: 'Profile', icon: Settings }
   ];
 
   const navItems = user?.role === 'owner' ? ownerNavItems : managerNavItems;
