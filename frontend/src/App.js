@@ -199,6 +199,15 @@ function App() {
 // Dashboard Router - Shows different dashboard based on role
 const DashboardRouter = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  
+  // If owner doesn't have workshop_id, redirect to setup
+  React.useEffect(() => {
+    if (user?.role === 'owner' && !user?.workshop_id) {
+      navigate('/workshop-setup', { replace: true });
+    }
+  }, [user, navigate]);
+  
   return user?.role === 'owner' ? <OwnerDashboard /> : <ManagerDashboard />;
 };
 
