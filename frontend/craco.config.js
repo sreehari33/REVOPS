@@ -11,10 +11,10 @@ module.exports = {
     },
   },
   webpack: {
-    alias: {
-      '@': path.resolve(__dirname, 'src'),
-      'react/jsx-dev-runtime': 'react/jsx-runtime',
-    },
+  alias: {
+  '@': path.resolve(__dirname, 'src'),
+  'react/jsx-dev-runtime': path.resolve(__dirname, 'src/jsx-dev-runtime-shim.js'),
+},
     configure: (webpackConfig) => {
       // Remove react-refresh in production
       webpackConfig.plugins = webpackConfig.plugins.filter(
