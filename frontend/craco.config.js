@@ -43,9 +43,10 @@ const webpackConfig = {
     },
   },
   webpack: {
-    alias: {
-      '@': path.resolve(__dirname, 'src'),
-    },
+   alias: {
+  '@': path.resolve(__dirname, 'src'),
+  'react/jsx-dev-runtime': 'react/jsx-runtime',
+},
     configure: (webpackConfig) => {// Remove react-refresh in production
 if (process.env.NODE_ENV === 'production') {
   webpackConfig.plugins = webpackConfig.plugins.filter(
