@@ -175,10 +175,7 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['owner']}>
                 <DashboardLayout>
-                  <div className="text-center py-12">
-                    <h1 className="text-3xl font-bold mb-4">Settings Coming Soon</h1>
-                    <p className="text-muted-foreground">Workshop settings and customization options will be available here</p>
-                  </div>
+                  <SettingsPage />
                 </DashboardLayout>
               </ProtectedRoute>
             } 
