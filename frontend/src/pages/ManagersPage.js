@@ -28,23 +28,32 @@ export const ManagersPage = () => {
       setManagers(managersRes.data);
       setWorkshopId(workshopRes.data.id);
       
-      const codesRes = await workshopAPI.getInviteCodes(workshopRes.data.id);
-      setInviteCodes(codesRes.data.filter(c => c.is_active));
+      if (workshopRes.data.id) {
+        const codesRes = await workshopAPI.getInviteCodes(workshopRes.data.id);
+        setInviteCodes(codesRes.data.filter(c => c.is_active));
+      }
     } catch (error) {
-      toast.error('Failed to load data');
+      console.error('Fetch data error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to load data');
     } finally {
       setLoading(false);
     }
   };
 
   const generateInviteCode = async () => {
+    if (!workshopId) {
+      toast.error('Workshop not found. Please create a workshop first.');
+      return;
+    }
+    
     try {
       await workshopAPI.createInviteCode(workshopId);
       toast.success('Invite code generated!');
       fetchData();
       setInviteDialogOpen(true);
     } catch (error) {
-      toast.error('Failed to generate invite code');
+      console.error('Generate invite error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to generate invite code');
     }
   };
 
