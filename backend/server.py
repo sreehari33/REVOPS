@@ -960,7 +960,7 @@ async def generate_invoice(job_id: str, current_user: dict = Depends(get_current
     return StreamingResponse(
         buffer,
         media_type="application/pdf",
-        headers={{"Content-Disposition": f"attachment; filename=invoice_{job_id[:8]}.pdf"}}
+        headers={"Content-Disposition": f"attachment; filename=invoice_{job_id[:8]}.pdf"}
     )
 
 app.add_middleware(
