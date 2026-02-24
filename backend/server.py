@@ -587,7 +587,8 @@ async def get_payments(
     else:
         workshop = await db.workshops.find_one({"owner_id": current_user["id"]}, {"_id": 0})
         if not workshop:
-            raise HTTPException(status_code=404, detail="Workshop not found")
+            # Return empty list if no workshop yet
+            return []
         
         # Get all payments for this workshop's jobs
         jobs = await db.jobs.find({"workshop_id": workshop["id"]}, {"_id": 0, "id": 1}).to_list(10000)
