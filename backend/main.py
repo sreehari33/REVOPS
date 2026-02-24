@@ -966,7 +966,7 @@ async def generate_invoice(job_id: str, current_user: dict = Depends(get_current
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
