@@ -46,7 +46,12 @@ const webpackConfig = {
     alias: {
       '@': path.resolve(__dirname, 'src'),
     },
-    configure: (webpackConfig) => {
+    configure: (webpackConfig) => {// Remove react-refresh in production
+if (process.env.NODE_ENV === 'production') {
+  webpackConfig.plugins = webpackConfig.plugins.filter(
+    plugin => plugin.constructor.name !== 'ReactRefreshPlugin'
+  );
+}
 
       // Add ignored patterns to reduce watched directories
         webpackConfig.watchOptions = {
