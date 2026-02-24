@@ -947,10 +947,8 @@ async def generate_invoice(job_id: str, current_user: dict = Depends(get_current
     return StreamingResponse(
         buffer,
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=invoice_{job_id[:8]}.pdf"}
+        headers={{"Content-Disposition": f"attachment; filename=invoice_{job_id[:8]}.pdf"}}
     )
-
-app.include_router(api_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -959,6 +957,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(api_router)
 
 logging.basicConfig(
     level=logging.INFO,
