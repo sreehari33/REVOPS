@@ -78,6 +78,23 @@ export const ManagersPage = () => {
     return <div className="text-center py-12" data-testid="loading">Loading...</div>;
   }
 
+  if (!workshopId && managers.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <h2 className="text-3xl font-bold mb-4 uppercase tracking-tighter">Workshop Setup Required</h2>
+        <p className="text-muted-foreground mb-6">
+          You need to set up your workshop before managing managers.
+        </p>
+        <Button 
+          onClick={() => window.location.href = '/settings'}
+          className="bg-primary hover:bg-red-700"
+        >
+          Go to Settings
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div data-testid="managers-page">
       <div className="flex items-center justify-between mb-8">
