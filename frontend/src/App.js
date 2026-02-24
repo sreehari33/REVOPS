@@ -162,8 +162,13 @@ function App() {
               <ProtectedRoute allowedRoles={['owner']}>
                 <DashboardLayout>
                   <div className="text-center py-12">
-                    <h1 className="text-3xl font-bold mb-4">Reports Coming Soon</h1>
-                    <p className="text-muted-foreground">Advanced reporting features will be available here</p>
+                    <h1 className="text-4xl font-bold mb-4 uppercase tracking-tighter">Advanced Reports</h1>
+                    <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
+                      View your analytics dashboard for comprehensive insights. Advanced custom reports coming soon.
+                    </p>
+                    <Button onClick={() => window.location.href = '/dashboard'} className="bg-primary hover:bg-red-700">
+                      Go to Analytics Dashboard
+                    </Button>
                   </div>
                 </DashboardLayout>
               </ProtectedRoute>
