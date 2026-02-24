@@ -11,23 +11,27 @@ module.exports = {
     },
   },
   webpack: {
-  alias: {
-  '@': path.resolve(__dirname, 'src'),
-  'react/jsx-dev-runtime': path.resolve(__dirname, 'src/jsx-dev-runtime-shim.js'),
-},
     configure: (webpackConfig) => {
-      // Remove react-refresh in production
+      webpackConfig.resolve.alias = {
+        ...webpackConfig.resolve.alias,
+        '@': path.resolve(__dirname, 'src'),
+        'react/jsx-dev-runtime': require.resolve('./src/jsx-dev-runtime-shim.js'),
+      };
+
       webpackConfig.plugins = webpackConfig.plugins.filter(
         plugin => plugin.constructor.name !== 'ReactRefreshPlugin'
       );
 
-      // Force production React
-      webpackConfig.resolve = {
-        ...webpackConfig.resolve,
-        alias: {
-          ...webpackConfig.resolve.alias,
-          'react/jsx-dev-runtime': 'react/jsx-runtime',
-        }
+      webpackConfig.watchOptions = {
+        ...webpackConfig.watchOptions,
+        ignored: [
+          '**/node_modules/**',
+          '**/.git/**',
+          '**/build/**',
+          '**/dist/**',
+          '**/coverage/**',
+          '**/public/**',
+        ],
       };
 
       return webpackConfig;
