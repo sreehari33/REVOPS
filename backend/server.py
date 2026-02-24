@@ -681,7 +681,8 @@ async def get_settlements(
     else:
         workshop = await db.workshops.find_one({"owner_id": current_user["id"]}, {"_id": 0})
         if not workshop:
-            raise HTTPException(status_code=404, detail="Workshop not found")
+            # Return empty list if no workshop yet
+            return []
         query["workshop_id"] = workshop["id"]
     
     settlements = await db.settlements.find(query, {"_id": 0}).sort("submitted_date", -1).to_list(10000)
