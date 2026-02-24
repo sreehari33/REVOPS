@@ -364,7 +364,8 @@ async def get_managers(current_user: dict = Depends(get_current_user)):
     
     workshop = await db.workshops.find_one({"owner_id": current_user["id"]}, {"_id": 0})
     if not workshop:
-        raise HTTPException(status_code=404, detail="Workshop not found")
+        # Return empty list if no workshop yet
+        return []
     
     managers = await db.managers.find({"workshop_id": workshop["id"], "is_active": True}, {"_id": 0}).to_list(1000)
     
