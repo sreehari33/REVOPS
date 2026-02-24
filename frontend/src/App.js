@@ -18,6 +18,7 @@ import CreateJob from '@/pages/CreateJob';
 import ManagersPage from '@/pages/ManagersPage';
 import PaymentsPage from '@/pages/PaymentsPage';
 import SettingsPage from '@/pages/SettingsPage';
+import ManagerProfilePage from '@/pages/ManagerProfilePage';
 
 // Layout
 import DashboardLayout from '@/components/DashboardLayout';
