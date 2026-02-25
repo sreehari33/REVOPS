@@ -1,11 +1,9 @@
-[phases.setup]
-nixPkgs = ["nodejs_20"]
+# Updated nixpacks.toml to use npm instead of yarn
 
-[phases.install]
-cmds = ["yarn install --frozen-lockfile"]
+# Dependencies
+# npm ci
 
-[phases.build]
-cmds = ["yarn build"]
+# Build
+# npm run build
 
-[start]
-cmd = "npx serve -s build -l $PORT"
+# Additional configurations can go here as needed.
