@@ -2,10 +2,10 @@
 nixPkgs = ["nodejs_20"]
 
 [phases.install]
-cmds = ["npm install --frozen-lockfile"]
+cmds = ["cd frontend && npm ci"]
 
 [phases.build]
-cmds = ["npm run build"]
+cmds = ["cd frontend && npm run build"]
 
 [start]
-cmd = "npx serve -s build -l $PORT"
+cmd = "cd frontend && npx serve -s build -l $PORT"
