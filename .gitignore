@@ -27,7 +27,7 @@ PIPFILE.lock
 # Virtual Environment
 venv/
 ENV/
-/env/
+env/
 .venv
 
 # Environment variables
