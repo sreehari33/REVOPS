@@ -1,9 +1,2 @@
-# Updated nixpacks.toml to use npm instead of yarn
-
-# Dependencies
-# npm ci
-
-# Build
-# npm run build
-
-# Additional configurations can go here as needed.
+[phases.install] cmds = ["npm ci --frozen-lockfile"]
+[phases.build] cmds = ["npm run build"]
