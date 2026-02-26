@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { CurrencyProvider } from '@/context/CurrencyContext';  // ← ADD THIS
 import { Toaster } from '@/components/ui/sonner';
 import { Button } from '@/components/ui/button';
 import '@/App.css';
@@ -75,134 +76,136 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
-          <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
-          <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
+        <CurrencyProvider>  {/* ← ADD THIS WRAPPER */}
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<PublicRoute><LandingPage /></PublicRoute>} />
+            <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+            <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
 
-          {/* Workshop Setup */}
-          <Route 
-            path="/workshop-setup" 
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <WorkshopSetup />
-              </ProtectedRoute>
-            } 
-          />
+            {/* Workshop Setup */}
+            <Route
+              path="/workshop-setup"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <WorkshopSetup />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Protected Routes with Dashboard Layout */}
-          <Route 
-            path="/dashboard" 
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <DashboardRouter />
-                </DashboardLayout>
-              </ProtectedRoute>
-            } 
-          />
+            {/* Protected Routes with Dashboard Layout */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <DashboardRouter />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
 
-          <Route 
-            path="/jobs" 
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <JobsList />
-                </DashboardLayout>
-              </ProtectedRoute>
-            } 
-          />
+            <Route
+              path="/jobs"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <JobsList />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
 
-          <Route 
-            path="/jobs/new" 
-            element={
-              <ProtectedRoute allowedRoles={['manager']}>
-                <DashboardLayout>
-                  <CreateJob />
-                </DashboardLayout>
-              </ProtectedRoute>
-            } 
-          />
+            <Route
+              path="/jobs/new"
+              element={
+                <ProtectedRoute allowedRoles={['manager']}>
+                  <DashboardLayout>
+                    <CreateJob />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
 
-          <Route 
-            path="/jobs/:id" 
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <JobDetail />
-                </DashboardLayout>
-              </ProtectedRoute>
-            } 
-          />
+            <Route
+              path="/jobs/:id"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <JobDetail />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
 
-          <Route 
-            path="/managers" 
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <DashboardLayout>
-                  <ManagersPage />
-                </DashboardLayout>
-              </ProtectedRoute>
-            } 
-          />
+            <Route
+              path="/managers"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <DashboardLayout>
+                    <ManagersPage />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
 
-          <Route 
-            path="/payments" 
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <PaymentsPage />
-                </DashboardLayout>
-              </ProtectedRoute>
-            } 
-          />
+            <Route
+              path="/payments"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout>
+                    <PaymentsPage />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
 
-          <Route 
-            path="/profile" 
-            element={
-              <ProtectedRoute allowedRoles={['manager']}>
-                <DashboardLayout>
-                  <ManagerProfilePage />
-                </DashboardLayout>
-              </ProtectedRoute>
-            } 
-          />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute allowedRoles={['manager']}>
+                  <DashboardLayout>
+                    <ManagerProfilePage />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
 
-          <Route 
-            path="/reports" 
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <DashboardLayout>
-                  <div className="text-center py-12">
-                    <h1 className="text-4xl font-bold mb-4 uppercase tracking-tighter">Advanced Reports</h1>
-                    <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
-                      View your analytics dashboard for comprehensive insights. Advanced custom reports coming soon.
-                    </p>
-                    <Button onClick={() => window.location.href = '/dashboard'} className="bg-primary hover:bg-red-700">
-                      Go to Analytics Dashboard
-                    </Button>
-                  </div>
-                </DashboardLayout>
-              </ProtectedRoute>
-            } 
-          />
+            <Route
+              path="/reports"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <DashboardLayout>
+                    <div className="text-center py-12">
+                      <h1 className="text-4xl font-bold mb-4 uppercase tracking-tighter">Advanced Reports</h1>
+                      <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
+                        View your analytics dashboard for comprehensive insights. Advanced custom reports coming soon.
+                      </p>
+                      <Button onClick={() => window.location.href = '/dashboard'} className="bg-primary hover:bg-red-700">
+                        Go to Analytics Dashboard
+                      </Button>
+                    </div>
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
 
-          <Route 
-            path="/settings" 
-            element={
-              <ProtectedRoute allowedRoles={['owner']}>
-                <DashboardLayout>
-                  <SettingsPage />
-                </DashboardLayout>
-              </ProtectedRoute>
-            } 
-          />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute allowedRoles={['owner']}>
+                  <DashboardLayout>
+                    <SettingsPage />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        <Toaster theme="dark" position="top-right" />
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+          <Toaster theme="dark" position="top-right" />
+        </CurrencyProvider>  {/* ← CLOSE IT HERE */}
       </AuthProvider>
     </BrowserRouter>
   );
@@ -212,14 +215,13 @@ function App() {
 const DashboardRouter = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  
-  // If owner doesn't have workshop_id, redirect to setup
+
   React.useEffect(() => {
     if (user?.role === 'owner' && !user?.workshop_id) {
       navigate('/workshop-setup', { replace: true });
     }
   }, [user, navigate]);
-  
+
   return user?.role === 'owner' ? <OwnerDashboard /> : <ManagerDashboard />;
 };
 
