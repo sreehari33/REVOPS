@@ -73,6 +73,7 @@ class WorkshopUpdate(BaseModel):
     address: Optional[str] = None
     phone: Optional[str] = None
     gst_number: Optional[str] = None
+    currency: Optional[str] = None  
 
 class JobCreate(BaseModel):
     customer_name: str
@@ -858,7 +859,9 @@ async def generate_job_card(job_id: str, current_user: dict = Depends(get_curren
     job = await db.jobs.find_one({"id": job_id}, {"_id": 0})
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
+    workshop_data = await db.workshops.find_one({"id": job["workshop_id"]}, {"_id": 0})
+    currency_symbol = workshop_data.get('currency', 'INR') if workshop_data else 'INR'
     # Create PDF
     buffer = io.BytesIO()
     pdf = canvas.Canvas(buffer, pagesize=letter)
@@ -881,9 +884,11 @@ async def generate_job_card(job_id: str, current_user: dict = Depends(get_curren
     y -= 0.3*inch
     pdf.drawString(1*inch, y, f"Work: {job['work_description']}")
     y -= 0.3*inch
-    pdf.drawString(1*inch, y, f"Estimated Amount: ₹{job['estimated_amount']}")
+   currency_symbol = workshop_data.get('currency', 'INR') if workshop_data else 'INR'
+    pdf.drawString(1*inch, y, f"Estimated Amount: {currency_symbol} {job['estimated_amount']}")
     y -= 0.3*inch
-    pdf.drawString(1*inch, y, f"Advance Paid: ₹{job['advance_paid']}")
+    pdf.drawString(1*inch, y, f"Advance Paid: {currency_symbol} {job['advance_paid']}")
+
     y -= 0.3*inch
     pdf.drawString(1*inch, y, f"Status: {job['status']}")
     
@@ -955,12 +960,13 @@ async def generate_invoice(job_id: str, current_user: dict = Depends(get_current
     pdf.drawString(1*inch, y, "Amount Details")
     y -= 0.3*inch
     pdf.setFont("Helvetica", 10)
-    pdf.drawString(1*inch, y, f"Total Amount: ₹{job['estimated_amount']}")
+    inv_currency = workshop.get('currency', 'INR') if workshop else 'INR'
+    pdf.drawString(1*inch, y, f"Total Amount: {inv_currency} {job['estimated_amount']}")
     y -= 0.2*inch
-    pdf.drawString(1*inch, y, f"Paid: ₹{total_paid}")
+    pdf.drawString(1*inch, y, f"Paid: {inv_currency} {total_paid}")
     y -= 0.2*inch
     pdf.setFont("Helvetica-Bold", 12)
-    pdf.drawString(1*inch, y, f"Balance: ₹{job['estimated_amount'] - total_paid}")
+    pdf.drawString(1*inch, y, f"Balance: {inv_currency} {job['estimated_amount'] - total_paid}")
     
     pdf.save()
     buffer.seek(0)
