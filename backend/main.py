@@ -73,7 +73,7 @@ class WorkshopUpdate(BaseModel):
     address: Optional[str] = None
     phone: Optional[str] = None
     gst_number: Optional[str] = None
-    currency: Optional[str] = None  
+    currency: Optional[str] = None
 
 class JobCreate(BaseModel):
     customer_name: str
@@ -132,14 +132,14 @@ def create_access_token(data: dict) -> str:
 async def get_current_user(authorization: Optional[str] = Header(None)):
     if not authorization or not authorization.startswith('Bearer '):
         raise HTTPException(status_code=401, detail="Not authenticated")
-    
+
     token = authorization.replace('Bearer ', '')
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("sub")
         if not user_id:
             raise HTTPException(status_code=401, detail="Invalid token")
-        
+
         user = await db.users.find_one({"id": user_id}, {"_id": 0})
         if not user:
             raise HTTPException(status_code=401, detail="User not found")
@@ -153,39 +153,34 @@ async def get_current_user(authorization: Optional[str] = Header(None)):
 
 @api_router.post("/auth/register")
 async def register(user_data: UserRegister):
-    # Check if user exists
     existing = await db.users.find_one({"email": user_data.email}, {"_id": 0})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
-    
-    # Validate role
+
     if user_data.role not in [UserRole.OWNER, UserRole.MANAGER]:
         raise HTTPException(status_code=400, detail="Invalid role")
-    
+
     user_id = str(uuid.uuid4())
     workshop_id = None
-    
-    # If manager, validate invite code
+
     if user_data.role == UserRole.MANAGER:
         if not user_data.invite_code:
             raise HTTPException(status_code=400, detail="Invite code required for managers")
-        
+
         invite = await db.invite_codes.find_one(
             {"code": user_data.invite_code, "is_active": True, "used_by": None},
             {"_id": 0}
         )
         if not invite:
             raise HTTPException(status_code=400, detail="Invalid or expired invite code")
-        
+
         workshop_id = invite["workshop_id"]
-        
-        # Mark invite code as used
+
         await db.invite_codes.update_one(
             {"code": user_data.invite_code},
             {"$set": {"used_by": user_id, "used_at": datetime.now(timezone.utc).isoformat()}}
         )
-        
-        # Create manager record
+
         await db.managers.insert_one({
             "id": str(uuid.uuid4()),
             "user_id": user_id,
@@ -194,8 +189,7 @@ async def register(user_data: UserRegister):
             "is_active": True,
             "permissions": {}
         })
-    
-    # Create user
+
     user = {
         "id": user_id,
         "email": user_data.email,
@@ -206,10 +200,9 @@ async def register(user_data: UserRegister):
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(user)
-    
-    # Create access token
+
     token = create_access_token({"sub": user_id, "email": user_data.email, "role": user_data.role})
-    
+
     return {
         "token": token,
         "user": {
@@ -226,7 +219,7 @@ async def login(credentials: UserLogin):
     user = await db.users.find_one({"email": credentials.email}, {"_id": 0})
     if not user or not verify_password(credentials.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    
+
     workshop_id = None
     if user["role"] == UserRole.MANAGER:
         manager = await db.managers.find_one({"user_id": user["id"], "is_active": True}, {"_id": 0})
@@ -236,9 +229,9 @@ async def login(credentials: UserLogin):
         workshop = await db.workshops.find_one({"owner_id": user["id"]}, {"_id": 0})
         if workshop:
             workshop_id = workshop["id"]
-    
+
     token = create_access_token({"sub": user["id"], "email": user["email"], "role": user["role"]})
-    
+
     return {
         "token": token,
         "user": {
@@ -261,7 +254,7 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         workshop = await db.workshops.find_one({"owner_id": current_user["id"]}, {"_id": 0})
         if workshop:
             workshop_id = workshop["id"]
-    
+
     return {
         "id": current_user["id"],
         "email": current_user["email"],
@@ -276,12 +269,11 @@ async def get_me(current_user: dict = Depends(get_current_user)):
 async def create_workshop(workshop_data: WorkshopCreate, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != UserRole.OWNER:
         raise HTTPException(status_code=403, detail="Only owners can create workshops")
-    
-    # Check if owner already has a workshop
+
     existing = await db.workshops.find_one({"owner_id": current_user["id"]}, {"_id": 0})
     if existing:
         raise HTTPException(status_code=400, detail="You already have a workshop")
-    
+
     workshop = {
         "id": str(uuid.uuid4()),
         "owner_id": current_user["id"],
@@ -292,7 +284,7 @@ async def create_workshop(workshop_data: WorkshopCreate, current_user: dict = De
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.workshops.insert_one(workshop)
-    
+
     return {"id": workshop["id"], **workshop_data.model_dump()}
 
 @api_router.get("/workshops/me")
@@ -304,7 +296,7 @@ async def get_my_workshop(current_user: dict = Depends(get_current_user)):
         if not manager:
             raise HTTPException(status_code=404, detail="Manager record not found")
         workshop = await db.workshops.find_one({"id": manager["workshop_id"]}, {"_id": 0})
-    
+
     if not workshop:
         raise HTTPException(status_code=404, detail="Workshop not found")
     return workshop
@@ -313,26 +305,26 @@ async def get_my_workshop(current_user: dict = Depends(get_current_user)):
 async def update_workshop(workshop_id: str, workshop_data: WorkshopUpdate, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != UserRole.OWNER:
         raise HTTPException(status_code=403, detail="Only owners can update workshops")
-    
+
     workshop = await db.workshops.find_one({"id": workshop_id, "owner_id": current_user["id"]}, {"_id": 0})
     if not workshop:
         raise HTTPException(status_code=404, detail="Workshop not found")
-    
+
     update_data = {k: v for k, v in workshop_data.model_dump().items() if v is not None}
     if update_data:
         await db.workshops.update_one({"id": workshop_id}, {"$set": update_data})
-    
+
     return {"message": "Workshop updated successfully"}
 
 @api_router.post("/workshops/{workshop_id}/invite-codes")
 async def create_invite_code(workshop_id: str, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != UserRole.OWNER:
         raise HTTPException(status_code=403, detail="Only owners can create invite codes")
-    
+
     workshop = await db.workshops.find_one({"id": workshop_id, "owner_id": current_user["id"]}, {"_id": 0})
     if not workshop:
         raise HTTPException(status_code=404, detail="Workshop not found")
-    
+
     code = str(uuid.uuid4())[:8].upper()
     invite = {
         "id": str(uuid.uuid4()),
@@ -345,14 +337,14 @@ async def create_invite_code(workshop_id: str, current_user: dict = Depends(get_
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.invite_codes.insert_one(invite)
-    
+
     return {"code": code, "created_at": invite["created_at"]}
 
 @api_router.get("/workshops/{workshop_id}/invite-codes")
 async def get_invite_codes(workshop_id: str, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != UserRole.OWNER:
         raise HTTPException(status_code=403, detail="Only owners can view invite codes")
-    
+
     codes = await db.invite_codes.find({"workshop_id": workshop_id}, {"_id": 0}).to_list(1000)
     return codes
 
@@ -362,39 +354,37 @@ async def get_invite_codes(workshop_id: str, current_user: dict = Depends(get_cu
 async def get_managers(current_user: dict = Depends(get_current_user)):
     if current_user["role"] != UserRole.OWNER:
         raise HTTPException(status_code=403, detail="Only owners can view managers")
-    
+
     workshop = await db.workshops.find_one({"owner_id": current_user["id"]}, {"_id": 0})
     if not workshop:
-        # Return empty list if no workshop yet
         return []
-    
+
     managers = await db.managers.find({"workshop_id": workshop["id"], "is_active": True}, {"_id": 0}).to_list(1000)
-    
-    # Enrich with user data
+
     for manager in managers:
         user = await db.users.find_one({"id": manager["user_id"]}, {"_id": 0, "password_hash": 0})
         if user:
             manager["user"] = user
-    
+
     return managers
 
 @api_router.delete("/managers/{manager_id}")
 async def remove_manager(manager_id: str, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != UserRole.OWNER:
         raise HTTPException(status_code=403, detail="Only owners can remove managers")
-    
+
     workshop = await db.workshops.find_one({"owner_id": current_user["id"]}, {"_id": 0})
     if not workshop:
         raise HTTPException(status_code=404, detail="Workshop not found")
-    
+
     result = await db.managers.update_one(
         {"id": manager_id, "workshop_id": workshop["id"]},
         {"$set": {"is_active": False}}
     )
-    
+
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="Manager not found")
-    
+
     return {"message": "Manager removed successfully"}
 
 # ============ JOB ROUTES ============
@@ -403,11 +393,11 @@ async def remove_manager(manager_id: str, current_user: dict = Depends(get_curre
 async def create_job(job_data: JobCreate, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != UserRole.MANAGER:
         raise HTTPException(status_code=403, detail="Only managers can create jobs")
-    
+
     manager = await db.managers.find_one({"user_id": current_user["id"], "is_active": True}, {"_id": 0})
     if not manager:
         raise HTTPException(status_code=404, detail="Manager record not found")
-    
+
     job = {
         "id": str(uuid.uuid4()),
         "workshop_id": manager["workshop_id"],
@@ -419,8 +409,7 @@ async def create_job(job_data: JobCreate, current_user: dict = Depends(get_curre
         "completed_at": None
     }
     await db.jobs.insert_one(job)
-    
-    # Create job update
+
     await db.job_updates.insert_one({
         "id": str(uuid.uuid4()),
         "job_id": job["id"],
@@ -429,7 +418,7 @@ async def create_job(job_data: JobCreate, current_user: dict = Depends(get_curre
         "description": "Job created",
         "timestamp": datetime.now(timezone.utc).isoformat()
     })
-    
+
     return {"id": job["id"], "message": "Job created successfully"}
 
 @api_router.get("/jobs")
@@ -439,7 +428,7 @@ async def get_jobs(
     current_user: dict = Depends(get_current_user)
 ):
     query = {}
-    
+
     if current_user["role"] == UserRole.MANAGER:
         manager = await db.managers.find_one({"user_id": current_user["id"], "is_active": True}, {"_id": 0})
         if not manager:
@@ -453,24 +442,22 @@ async def get_jobs(
         query["workshop_id"] = workshop["id"]
         if manager_id:
             query["manager_id"] = manager_id
-    
+
     if status:
         query["status"] = status
-    
+
     jobs = await db.jobs.find(query, {"_id": 0}).sort("created_at", -1).to_list(10000)
-    
-    # Enrich with manager data
+
     for job in jobs:
         manager_user = await db.users.find_one({"id": job["manager_id"]}, {"_id": 0, "password_hash": 0})
         if manager_user:
             job["manager_name"] = manager_user["name"]
-        
-        # Calculate remaining amount
+
         payments = await db.payments.find({"job_id": job["id"]}, {"_id": 0}).to_list(1000)
         total_paid = sum(p["amount"] for p in payments)
         job["total_paid"] = total_paid
         job["remaining_amount"] = job["estimated_amount"] - total_paid
-    
+
     return jobs
 
 @api_router.get("/jobs/{job_id}")
@@ -478,8 +465,7 @@ async def get_job(job_id: str, current_user: dict = Depends(get_current_user)):
     job = await db.jobs.find_one({"id": job_id}, {"_id": 0})
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    
-    # Check access
+
     if current_user["role"] == UserRole.MANAGER:
         if job["manager_id"] != current_user["id"]:
             raise HTTPException(status_code=403, detail="Access denied")
@@ -487,19 +473,17 @@ async def get_job(job_id: str, current_user: dict = Depends(get_current_user)):
         workshop = await db.workshops.find_one({"owner_id": current_user["id"]}, {"_id": 0})
         if not workshop or job["workshop_id"] != workshop["id"]:
             raise HTTPException(status_code=403, detail="Access denied")
-    
-    # Get payments
+
     payments = await db.payments.find({"job_id": job_id}, {"_id": 0}).to_list(1000)
     total_paid = sum(p["amount"] for p in payments)
-    
-    # Get updates
+
     updates = await db.job_updates.find({"job_id": job_id}, {"_id": 0}).sort("timestamp", -1).to_list(1000)
-    
+
     job["payments"] = payments
     job["total_paid"] = total_paid
     job["remaining_amount"] = job["estimated_amount"] - total_paid
     job["updates"] = updates
-    
+
     return job
 
 @api_router.put("/jobs/{job_id}")
@@ -511,21 +495,20 @@ async def update_job(job_id: str, job_data: JobUpdate, current_user: dict = Depe
         if not workshop:
             raise HTTPException(status_code=404, detail="Workshop not found")
         job = await db.jobs.find_one({"id": job_id, "workshop_id": workshop["id"]}, {"_id": 0})
-    
+
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
     update_data = {k: v for k, v in job_data.model_dump().items() if v is not None}
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
-    
+
     if job_data.status and job_data.status in [JobStatus.COMPLETED, JobStatus.DELIVERED, JobStatus.CLOSED]:
         if not job.get("completed_at"):
             update_data["completed_at"] = datetime.now(timezone.utc).isoformat()
-    
+
     if update_data:
         await db.jobs.update_one({"id": job_id}, {"$set": update_data})
-        
-        # Create update record
+
         await db.job_updates.insert_one({
             "id": str(uuid.uuid4()),
             "job_id": job_id,
@@ -534,7 +517,7 @@ async def update_job(job_id: str, job_data: JobUpdate, current_user: dict = Depe
             "description": f"Job updated: {', '.join(update_data.keys())}",
             "timestamp": datetime.now(timezone.utc).isoformat()
         })
-    
+
     return {"message": "Job updated successfully"}
 
 # ============ PAYMENT ROUTES ============
@@ -548,10 +531,10 @@ async def create_payment(payment_data: PaymentCreate, current_user: dict = Depen
         if not workshop:
             raise HTTPException(status_code=404, detail="Workshop not found")
         job = await db.jobs.find_one({"id": payment_data.job_id, "workshop_id": workshop["id"]}, {"_id": 0})
-    
+
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
     payment = {
         "id": str(uuid.uuid4()),
         "job_id": payment_data.job_id,
@@ -564,17 +547,16 @@ async def create_payment(payment_data: PaymentCreate, current_user: dict = Depen
         "confirmation_date": None
     }
     await db.payments.insert_one(payment)
-    
-    # Create job update
+
     await db.job_updates.insert_one({
         "id": str(uuid.uuid4()),
         "job_id": payment_data.job_id,
         "updated_by": current_user["id"],
         "update_type": "payment",
-        "description": f"Payment of ₹{payment_data.amount} recorded",
+        "description": f"Payment of {payment_data.amount} recorded",
         "timestamp": datetime.now(timezone.utc).isoformat()
     })
-    
+
     return {"id": payment["id"], "message": "Payment recorded successfully"}
 
 @api_router.get("/payments")
@@ -584,29 +566,26 @@ async def get_payments(
     current_user: dict = Depends(get_current_user)
 ):
     query = {}
-    
+
     if job_id:
         query["job_id"] = job_id
-    
+
     if confirmed is not None:
         query["confirmed_by_owner"] = confirmed
-    
+
     if current_user["role"] == UserRole.MANAGER:
         query["collected_by_manager_id"] = current_user["id"]
     else:
         workshop = await db.workshops.find_one({"owner_id": current_user["id"]}, {"_id": 0})
         if not workshop:
-            # Return empty list if no workshop yet
             return []
-        
-        # Get all payments for this workshop's jobs
+
         jobs = await db.jobs.find({"workshop_id": workshop["id"]}, {"_id": 0, "id": 1}).to_list(10000)
         job_ids = [j["id"] for j in jobs]
         query["job_id"] = {"$in": job_ids}
-    
+
     payments = await db.payments.find(query, {"_id": 0}).sort("payment_date", -1).to_list(10000)
-    
-    # Enrich with job and manager data
+
     for payment in payments:
         job = await db.jobs.find_one({"id": payment["job_id"]}, {"_id": 0})
         if job:
@@ -614,31 +593,30 @@ async def get_payments(
                 "customer_name": job["customer_name"],
                 "vehicle_number": job["vehicle_number"]
             }
-        
+
         manager = await db.users.find_one({"id": payment["collected_by_manager_id"]}, {"_id": 0, "password_hash": 0})
         if manager:
             payment["manager_name"] = manager["name"]
-    
+
     return payments
 
 @api_router.put("/payments/{payment_id}/confirm")
 async def confirm_payment(payment_id: str, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != UserRole.OWNER:
         raise HTTPException(status_code=403, detail="Only owners can confirm payments")
-    
+
     payment = await db.payments.find_one({"id": payment_id}, {"_id": 0})
     if not payment:
         raise HTTPException(status_code=404, detail="Payment not found")
-    
-    # Verify payment belongs to owner's workshop
+
     job = await db.jobs.find_one({"id": payment["job_id"]}, {"_id": 0})
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
     workshop = await db.workshops.find_one({"owner_id": current_user["id"]}, {"_id": 0})
     if not workshop or job["workshop_id"] != workshop["id"]:
         raise HTTPException(status_code=403, detail="Access denied")
-    
+
     await db.payments.update_one(
         {"id": payment_id},
         {"$set": {
@@ -646,7 +624,7 @@ async def confirm_payment(payment_id: str, current_user: dict = Depends(get_curr
             "confirmation_date": datetime.now(timezone.utc).isoformat()
         }}
     )
-    
+
     return {"message": "Payment confirmed successfully"}
 
 # ============ SETTLEMENT ROUTES ============
@@ -655,11 +633,11 @@ async def confirm_payment(payment_id: str, current_user: dict = Depends(get_curr
 async def create_settlement(settlement_data: SettlementCreate, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != UserRole.MANAGER:
         raise HTTPException(status_code=403, detail="Only managers can submit settlements")
-    
+
     manager = await db.managers.find_one({"user_id": current_user["id"], "is_active": True}, {"_id": 0})
     if not manager:
         raise HTTPException(status_code=404, detail="Manager record not found")
-    
+
     settlement = {
         "id": str(uuid.uuid4()),
         "manager_id": current_user["id"],
@@ -672,7 +650,7 @@ async def create_settlement(settlement_data: SettlementCreate, current_user: dic
         "confirmation_date": None
     }
     await db.settlements.insert_one(settlement)
-    
+
     return {"id": settlement["id"], "message": "Settlement submitted successfully"}
 
 @api_router.get("/settlements")
@@ -681,42 +659,40 @@ async def get_settlements(
     current_user: dict = Depends(get_current_user)
 ):
     query = {}
-    
+
     if confirmed is not None:
         query["confirmed_by_owner"] = confirmed
-    
+
     if current_user["role"] == UserRole.MANAGER:
         query["manager_id"] = current_user["id"]
     else:
         workshop = await db.workshops.find_one({"owner_id": current_user["id"]}, {"_id": 0})
         if not workshop:
-            # Return empty list if no workshop yet
             return []
         query["workshop_id"] = workshop["id"]
-    
+
     settlements = await db.settlements.find(query, {"_id": 0}).sort("submitted_date", -1).to_list(10000)
-    
-    # Enrich with manager data
+
     for settlement in settlements:
         manager = await db.users.find_one({"id": settlement["manager_id"]}, {"_id": 0, "password_hash": 0})
         if manager:
             settlement["manager_name"] = manager["name"]
-    
+
     return settlements
 
 @api_router.put("/settlements/{settlement_id}/confirm")
 async def confirm_settlement(settlement_id: str, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != UserRole.OWNER:
         raise HTTPException(status_code=403, detail="Only owners can confirm settlements")
-    
+
     settlement = await db.settlements.find_one({"id": settlement_id}, {"_id": 0})
     if not settlement:
         raise HTTPException(status_code=404, detail="Settlement not found")
-    
+
     workshop = await db.workshops.find_one({"owner_id": current_user["id"]}, {"_id": 0})
     if not workshop or settlement["workshop_id"] != workshop["id"]:
         raise HTTPException(status_code=403, detail="Access denied")
-    
+
     await db.settlements.update_one(
         {"id": settlement_id},
         {"$set": {
@@ -724,7 +700,7 @@ async def confirm_settlement(settlement_id: str, current_user: dict = Depends(ge
             "confirmation_date": datetime.now(timezone.utc).isoformat()
         }}
     )
-    
+
     return {"message": "Settlement confirmed successfully"}
 
 # ============ ANALYTICS ROUTES ============
@@ -733,10 +709,9 @@ async def confirm_settlement(settlement_id: str, current_user: dict = Depends(ge
 async def get_dashboard_analytics(current_user: dict = Depends(get_current_user)):
     if current_user["role"] != UserRole.OWNER:
         raise HTTPException(status_code=403, detail="Only owners can view analytics")
-    
+
     workshop = await db.workshops.find_one({"owner_id": current_user["id"]}, {"_id": 0})
     if not workshop:
-        # Return empty analytics if no workshop yet
         return {
             "total_jobs": 0,
             "total_revenue": 0,
@@ -747,29 +722,23 @@ async def get_dashboard_analytics(current_user: dict = Depends(get_current_user)
             "manager_revenue": {},
             "daily_revenue": {}
         }
-    
-    # Get all jobs
+
     jobs = await db.jobs.find({"workshop_id": workshop["id"]}, {"_id": 0}).to_list(100000)
-    
-    # Calculate metrics
+
     total_jobs = len(jobs)
     total_revenue = sum(j["estimated_amount"] for j in jobs)
-    
-    # Get all payments
+
     job_ids = [j["id"] for j in jobs]
     payments = await db.payments.find({"job_id": {"$in": job_ids}}, {"_id": 0}).to_list(100000)
     total_collected = sum(p["amount"] for p in payments)
-    
-    # Outstanding credits
+
     total_credits = total_revenue - total_collected
-    
-    # Jobs by status
+
     status_counts = {}
     for job in jobs:
         status = job["status"]
         status_counts[status] = status_counts.get(status, 0) + 1
-    
-    # Revenue by manager
+
     manager_revenue = {}
     for job in jobs:
         manager_id = job["manager_id"]
@@ -777,20 +746,19 @@ async def get_dashboard_analytics(current_user: dict = Depends(get_current_user)
             manager_revenue[manager_id] = {"total": 0, "jobs": 0}
         manager_revenue[manager_id]["total"] += job["estimated_amount"]
         manager_revenue[manager_id]["jobs"] += 1
-    
-    # Daily revenue (last 30 days)
+
     now = datetime.now(timezone.utc)
     daily_revenue = {}
     for i in range(30):
         date = (now - timedelta(days=i)).strftime("%Y-%m-%d")
         daily_revenue[date] = 0
-    
+
     for job in jobs:
         created = datetime.fromisoformat(job["created_at"])
         date = created.strftime("%Y-%m-%d")
         if date in daily_revenue:
             daily_revenue[date] += job["estimated_amount"]
-    
+
     return {
         "total_jobs": total_jobs,
         "total_revenue": total_revenue,
@@ -806,30 +774,26 @@ async def get_dashboard_analytics(current_user: dict = Depends(get_current_user)
 async def export_data(current_user: dict = Depends(get_current_user)):
     if current_user["role"] != UserRole.OWNER:
         raise HTTPException(status_code=403, detail="Only owners can export data")
-    
+
     workshop = await db.workshops.find_one({"owner_id": current_user["id"]}, {"_id": 0})
     if not workshop:
         raise HTTPException(status_code=404, detail="Workshop not found")
-    
-    # Get all jobs
+
     jobs = await db.jobs.find({"workshop_id": workshop["id"]}, {"_id": 0}).to_list(100000)
-    
-    # Create Excel file
+
     output = io.BytesIO()
     workbook = xlsxwriter.Workbook(output)
     worksheet = workbook.add_worksheet("Jobs")
-    
-    # Headers
+
     headers = [
         "Job ID", "Customer Name", "Phone", "Vehicle Number", "Car Model",
         "Work Description", "Estimated Amount", "Advance Paid", "Status",
         "Created At", "Completed At"
     ]
-    
+
     for col, header in enumerate(headers):
         worksheet.write(0, col, header)
-    
-    # Data
+
     for row, job in enumerate(jobs, start=1):
         worksheet.write(row, 0, job["id"])
         worksheet.write(row, 1, job["customer_name"])
@@ -842,10 +806,10 @@ async def export_data(current_user: dict = Depends(get_current_user)):
         worksheet.write(row, 8, job["status"])
         worksheet.write(row, 9, job["created_at"])
         worksheet.write(row, 10, job.get("completed_at", ""))
-    
+
     workbook.close()
     output.seek(0)
-    
+
     return StreamingResponse(
         output,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -862,16 +826,14 @@ async def generate_job_card(job_id: str, current_user: dict = Depends(get_curren
 
     workshop_data = await db.workshops.find_one({"id": job["workshop_id"]}, {"_id": 0})
     currency_symbol = workshop_data.get('currency', 'INR') if workshop_data else 'INR'
-    # Create PDF
+
     buffer = io.BytesIO()
     pdf = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
-    
-    # Title
+
     pdf.setFont("Helvetica-Bold", 20)
     pdf.drawString(1*inch, height - 1*inch, "JOB CARD")
-    
-    # Job details
+
     pdf.setFont("Helvetica", 12)
     y = height - 1.5*inch
     pdf.drawString(1*inch, y, f"Job ID: {job['id'][:8]}")
@@ -884,17 +846,15 @@ async def generate_job_card(job_id: str, current_user: dict = Depends(get_curren
     y -= 0.3*inch
     pdf.drawString(1*inch, y, f"Work: {job['work_description']}")
     y -= 0.3*inch
-   currency_symbol = workshop_data.get('currency', 'INR') if workshop_data else 'INR'
     pdf.drawString(1*inch, y, f"Estimated Amount: {currency_symbol} {job['estimated_amount']}")
     y -= 0.3*inch
     pdf.drawString(1*inch, y, f"Advance Paid: {currency_symbol} {job['advance_paid']}")
-
     y -= 0.3*inch
     pdf.drawString(1*inch, y, f"Status: {job['status']}")
-    
+
     pdf.save()
     buffer.seek(0)
-    
+
     return StreamingResponse(
         buffer,
         media_type="application/pdf",
@@ -906,23 +866,19 @@ async def generate_invoice(job_id: str, current_user: dict = Depends(get_current
     job = await db.jobs.find_one({"id": job_id}, {"_id": 0})
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
     workshop = await db.workshops.find_one({"id": job["workshop_id"]}, {"_id": 0})
-    
-    # Get payments
+
     payments = await db.payments.find({"job_id": job_id}, {"_id": 0}).to_list(1000)
     total_paid = sum(p["amount"] for p in payments)
-    
-    # Create PDF
+
     buffer = io.BytesIO()
     pdf = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
-    
-    # Title
+
     pdf.setFont("Helvetica-Bold", 24)
     pdf.drawString(1*inch, height - 1*inch, "INVOICE")
-    
-    # Workshop details
+
     pdf.setFont("Helvetica", 10)
     y = height - 1.3*inch
     pdf.drawString(1*inch, y, workshop["name"])
@@ -933,8 +889,7 @@ async def generate_invoice(job_id: str, current_user: dict = Depends(get_current
     if workshop.get("gst_number"):
         pdf.drawString(1*inch, y, f"GST: {workshop['gst_number']}")
         y -= 0.2*inch
-    
-    # Customer details
+
     y -= 0.3*inch
     pdf.setFont("Helvetica-Bold", 12)
     pdf.drawString(1*inch, y, "Bill To:")
@@ -943,8 +898,7 @@ async def generate_invoice(job_id: str, current_user: dict = Depends(get_current
     pdf.drawString(1*inch, y, job["customer_name"])
     y -= 0.2*inch
     pdf.drawString(1*inch, y, job["phone"])
-    
-    # Job details
+
     y -= 0.5*inch
     pdf.setFont("Helvetica-Bold", 12)
     pdf.drawString(1*inch, y, "Service Details")
@@ -953,8 +907,7 @@ async def generate_invoice(job_id: str, current_user: dict = Depends(get_current
     pdf.drawString(1*inch, y, f"Vehicle: {job['car_model']} - {job['vehicle_number']}")
     y -= 0.2*inch
     pdf.drawString(1*inch, y, f"Work: {job['work_description']}")
-    
-    # Amount details
+
     y -= 0.5*inch
     pdf.setFont("Helvetica-Bold", 12)
     pdf.drawString(1*inch, y, "Amount Details")
@@ -967,10 +920,10 @@ async def generate_invoice(job_id: str, current_user: dict = Depends(get_current
     y -= 0.2*inch
     pdf.setFont("Helvetica-Bold", 12)
     pdf.drawString(1*inch, y, f"Balance: {inv_currency} {job['estimated_amount'] - total_paid}")
-    
+
     pdf.save()
     buffer.seek(0)
-    
+
     return StreamingResponse(
         buffer,
         media_type="application/pdf",
