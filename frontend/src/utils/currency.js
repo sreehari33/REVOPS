@@ -6,7 +6,7 @@ export const CURRENCIES = [
   { code: 'GBP', symbol: '£', name: 'British Pound', locale: 'en-GB' },
   { code: 'AED', symbol: 'د.إ', name: 'UAE Dirham', locale: 'ar-AE' },
   { code: 'SAR', symbol: '﷼', name: 'Saudi Riyal', locale: 'ar-SA' },
-  { code: 'QAR', symbol: 'ر.ق', name: 'Qatari Riyal', locale: 'ar-QA' },
+  { code: 'QAR', symbol: 'QAR', name: 'Qatari Riyal', locale: 'en-IN' },
   { code: 'OMR', symbol: 'ر.ع.', name: 'Omani Rial', locale: 'ar-OM' },
   { code: 'KWD', symbol: 'د.ك', name: 'Kuwaiti Dinar', locale: 'ar-KW' },
   { code: 'BHD', symbol: 'د.ب', name: 'Bahraini Dinar', locale: 'ar-BH' },
