@@ -100,7 +100,7 @@ export const ManagerDashboard = () => {
                   <p className="text-sm text-muted-foreground">{job.vehicle_number} - {job.car_model}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-mono font-bold">₹{job.estimated_amount.toLocaleString('en-IN')}</p>
+                  <p className="font-mono font-bold">QAR{job.estimated_amount.toLocaleString('en-IN')}</p>
                   <span className={`status-badge status-${job.status}`}>{job.status.replace('_', ' ')}</span>
                 </div>
               </div>
