@@ -536,10 +536,14 @@ async def update_job(job_id: str, job_data: JobUpdate, current_user: dict = Depe
 
 @api_router.post("/payments")
 async def create_payment(payment_data: PaymentCreate, current_user: dict = Depends(get_current_user)):
-    if current_user["role"] != UserRole.MANAGER:
-        raise HTTPException(status_code=403, detail="Only managers can record payments")
+    if current_user["role"] == UserRole.MANAGER:
+        job = await db.jobs.find_one({"id": payment_data.job_id, "manager_id": current_user["id"]}, {"_id": 0})
+    else:
+        workshop = await db.workshops.find_one({"owner_id": current_user["id"]}, {"_id": 0})
+        if not workshop:
+            raise HTTPException(status_code=404, detail="Workshop not found")
+        job = await db.jobs.find_one({"id": payment_data.job_id, "workshop_id": workshop["id"]}, {"_id": 0})
     
-    job = await db.jobs.find_one({"id": payment_data.job_id, "manager_id": current_user["id"]}, {"_id": 0})
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     
