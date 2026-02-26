@@ -6,13 +6,20 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { workshopAPI } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
+import { useCurrency } from '@/context/CurrencyContext';
+import { CURRENCIES } from '@/utils/currency';
 import { toast } from 'sonner';
-import { Building2, User, Save } from 'lucide-react';
+import { Building2, User, Save, DollarSign, CheckCircle2 } from 'lucide-react';
 
 export const SettingsPage = () => {
   const { user } = useAuth();
+  const { currency, updateCurrency } = useCurrency();
+
   const [loading, setLoading] = useState(false);
+  const [currencyLoading, setCurrencyLoading] = useState(false);
   const [workshop, setWorkshop] = useState(null);
+  const [selectedCurrency, setSelectedCurrency] = useState(currency?.code || 'INR');
+
   const [workshopForm, setWorkshopForm] = useState({
     name: '',
     address: '',
@@ -24,6 +31,13 @@ export const SettingsPage = () => {
     fetchWorkshop();
   }, []);
 
+  // Keep local selectedCurrency in sync when context loads
+  useEffect(() => {
+    if (currency?.code) {
+      setSelectedCurrency(currency.code);
+    }
+  }, [currency]);
+
   const fetchWorkshop = async () => {
     try {
       const response = await workshopAPI.getMy();
@@ -34,6 +48,10 @@ export const SettingsPage = () => {
         phone: response.data.phone || '',
         gst_number: response.data.gst_number || ''
       });
+      // Set currency from workshop data
+      if (response.data.currency) {
+        setSelectedCurrency(response.data.currency);
+      }
     } catch (error) {
       console.error('Failed to load workshop:', error);
       toast.error('Failed to load workshop details');
@@ -43,7 +61,6 @@ export const SettingsPage = () => {
   const handleWorkshopUpdate = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     try {
       await workshopAPI.update(workshop.id, workshopForm);
       toast.success('Workshop details updated successfully!');
@@ -54,6 +71,24 @@ export const SettingsPage = () => {
       setLoading(false);
     }
   };
+
+  const handleCurrencyUpdate = async () => {
+    setCurrencyLoading(true);
+    try {
+      await workshopAPI.update(workshop.id, { currency: selectedCurrency });
+      updateCurrency(selectedCurrency);
+      toast.success('Currency updated successfully!');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to update currency');
+    } finally {
+      setCurrencyLoading(false);
+    }
+  };
+
+  // Group currencies: Middle East first, then others
+  const middleEastCodes = ['QAR', 'AED', 'SAR', 'KWD', 'BHD', 'OMR', 'JOD', 'EGP'];
+  const middleEastCurrencies = CURRENCIES.filter(c => middleEastCodes.includes(c.code));
+  const otherCurrencies = CURRENCIES.filter(c => !middleEastCodes.includes(c.code));
 
   if (!workshop) {
     return (
@@ -82,12 +117,17 @@ export const SettingsPage = () => {
             <Building2 className="w-4 h-4 mr-2" />
             Workshop Details
           </TabsTrigger>
+          <TabsTrigger value="currency" data-testid="currency-tab">
+            <DollarSign className="w-4 h-4 mr-2" />
+            Currency
+          </TabsTrigger>
           <TabsTrigger value="profile" data-testid="profile-tab">
             <User className="w-4 h-4 mr-2" />
             Profile
           </TabsTrigger>
         </TabsList>
 
+        {/* ── Workshop Details Tab ── */}
         <TabsContent value="workshop">
           <Card className="border-border">
             <CardHeader>
@@ -145,8 +185,8 @@ export const SettingsPage = () => {
                   />
                 </div>
 
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="bg-primary hover:bg-red-700 rounded-sm"
                   disabled={loading}
                   data-testid="save-workshop-btn"
@@ -159,6 +199,113 @@ export const SettingsPage = () => {
           </Card>
         </TabsContent>
 
+        {/* ── Currency Tab ── */}
+        <TabsContent value="currency">
+          <Card className="border-border">
+            <CardHeader>
+              <CardTitle className="text-xl font-bold tracking-tight uppercase">
+                Currency Settings
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Select the currency for your workshop. All amounts will display in this currency.
+                Language stays English regardless of selection.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+
+              {/* Current selection preview */}
+              <div className="flex items-center gap-3 p-4 bg-primary/10 border border-primary/30 rounded-sm">
+                <DollarSign className="w-5 h-5 text-primary" />
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Currently Active</p>
+                  <p className="font-mono font-bold text-lg">
+                    {CURRENCIES.find(c => c.code === selectedCurrency)?.symbol}{' '}
+                    <span className="text-muted-foreground font-normal text-sm">
+                      — {CURRENCIES.find(c => c.code === selectedCurrency)?.name}
+                    </span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Middle East section */}
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-3">
+                  Middle East
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {middleEastCurrencies.map((c) => (
+                    <button
+                      key={c.code}
+                      type="button"
+                      onClick={() => setSelectedCurrency(c.code)}
+                      className={`
+                        flex items-center gap-2 p-3 rounded-sm border text-left transition-all
+                        ${selectedCurrency === c.code
+                          ? 'border-primary bg-primary/10 text-foreground'
+                          : 'border-border bg-muted/20 text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                        }
+                      `}
+                    >
+                      <span className="font-mono font-bold text-sm w-10 shrink-0">{c.symbol}</span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold truncate">{c.code}</p>
+                        <p className="text-xs truncate opacity-70">{c.name}</p>
+                      </div>
+                      {selectedCurrency === c.code && (
+                        <CheckCircle2 className="w-4 h-4 text-primary ml-auto shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Other currencies section */}
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+                  Other Currencies
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {otherCurrencies.map((c) => (
+                    <button
+                      key={c.code}
+                      type="button"
+                      onClick={() => setSelectedCurrency(c.code)}
+                      className={`
+                        flex items-center gap-2 p-3 rounded-sm border text-left transition-all
+                        ${selectedCurrency === c.code
+                          ? 'border-primary bg-primary/10 text-foreground'
+                          : 'border-border bg-muted/20 text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                        }
+                      `}
+                    >
+                      <span className="font-mono font-bold text-sm w-10 shrink-0">{c.symbol}</span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold truncate">{c.code}</p>
+                        <p className="text-xs truncate opacity-70">{c.name}</p>
+                      </div>
+                      {selectedCurrency === c.code && (
+                        <CheckCircle2 className="w-4 h-4 text-primary ml-auto shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <Button
+                onClick={handleCurrencyUpdate}
+                className="bg-primary hover:bg-red-700 rounded-sm"
+                disabled={currencyLoading || selectedCurrency === currency?.code}
+                data-testid="save-currency-btn"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {currencyLoading ? 'Saving...' : 'Save Currency'}
+              </Button>
+
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── Profile Tab ── */}
         <TabsContent value="profile">
           <Card className="border-border">
             <CardHeader>
